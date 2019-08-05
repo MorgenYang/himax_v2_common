@@ -41,19 +41,19 @@
 #include <linux/kallsyms.h>
 
 #if defined(CONFIG_DRM)
-	#include <linux/msm_drm_notify.h>
+#include <linux/msm_drm_notify.h>
 #elif defined(CONFIG_FB)
-	#include <linux/notifier.h>
-	#include <linux/fb.h>
+#include <linux/notifier.h>
+#include <linux/fb.h>
 #elif defined(CONFIG_HAS_EARLYSUSPEND)
-	#include <linux/earlysuspend.h>
+#include <linux/earlysuspend.h>
 #endif
 
 #ifdef CONFIG_OF
-	#include <linux/of_gpio.h>
+#include <linux/of_gpio.h>
 #endif
 
-#define HIMAX_DRIVER_VER "2.0.0.29_ABCD1234_01"
+#define HIMAX_DRIVER_VER "2.0.0.30_ABCD1234_01"
 
 #define FLASH_DUMP_FILE "/sdcard/HX_Flash_Dump.bin"
 

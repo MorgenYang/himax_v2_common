@@ -85,9 +85,9 @@ static int himax_mcu_register_read(uint8_t *read_addr, uint32_t read_length,
 			g_core_fp.fp_burst_enable(0);
 
 		address = (read_addr[3] << 24)
-				+ (read_addr[2] << 16)
-				+ (read_addr[1] << 8)
-				+ read_addr[0];
+			+ (read_addr[2] << 16)
+			+ (read_addr[1] << 8)
+			+ read_addr[0];
 		i = address;
 		tmp_data[0] = (uint8_t)i;
 		tmp_data[1] = (uint8_t)(i >> 8);

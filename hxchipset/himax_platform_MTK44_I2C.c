@@ -22,6 +22,8 @@ DEFINE_MUTEX(hx_wr_access);
 
 const struct of_device_id himax_match_table[] = {
 	{.compatible = "mediatek,cap_touch" },
+	{.compatible = "mediatek,touch" },
+	{.compatible = "himax,hxcommon" },
 	{},
 };
 MODULE_DEVICE_TABLE(of, himax_match_table);

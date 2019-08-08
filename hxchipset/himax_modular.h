@@ -123,6 +123,7 @@ static void free_chip_dt_table(void)
 #if !defined(__HIMAX_HX852xH_MOD__) && !defined(__HIMAX_HX852xG_MOD__)
 static struct fw_operation **kp_pfw_op;
 static struct ic_operation **kp_pic_op;
+static struct flash_operation **kp_pflash_op;
 static struct driver_operation **kp_pdriver_op;
 #endif
 static struct himax_chip_detect **kp_g_core_chip_dt;
@@ -213,6 +214,7 @@ static int (*kp_himax_gpio_power_config)(struct himax_i2c_platform_data *pdata);
 #if !defined(__HIMAX_HX852xH_MOD__) && !defined(__HIMAX_HX852xG_MOD__)
 extern struct fw_operation *pfw_op;
 extern struct ic_operation *pic_op;
+extern struct flash_operation *pflash_op;
 extern struct driver_operation *pdriver_op;
 #endif
 extern struct himax_chip_detect *g_core_chip_dt;
@@ -305,6 +307,7 @@ static int32_t himax_ic_setup_external_symbols(void)
 #if !defined(__HIMAX_HX852xH_MOD__) && !defined(__HIMAX_HX852xG_MOD__)
 	assert_on_symbol(pfw_op);
 	assert_on_symbol(pic_op);
+	assert_on_symbol(pflash_op);
 	assert_on_symbol(pdriver_op);
 #endif
 	assert_on_symbol(g_core_chip_dt);

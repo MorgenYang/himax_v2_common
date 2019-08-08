@@ -23,6 +23,8 @@ struct fw_operation *pfw_op;
 EXPORT_SYMBOL(pfw_op);
 
 struct flash_operation *pflash_op;
+EXPORT_SYMBOL(pflash_op);
+
 struct sram_operation *psram_op;
 struct driver_operation *pdriver_op;
 EXPORT_SYMBOL(pdriver_op);
@@ -85,9 +87,9 @@ static int himax_mcu_register_read(uint8_t *read_addr, uint32_t read_length,
 			g_core_fp.fp_burst_enable(0);
 
 		address = (read_addr[3] << 24)
-			+ (read_addr[2] << 16)
-			+ (read_addr[1] << 8)
-			+ read_addr[0];
+				+ (read_addr[2] << 16)
+				+ (read_addr[1] << 8)
+				+ read_addr[0];
 		i = address;
 		tmp_data[0] = (uint8_t)i;
 		tmp_data[1] = (uint8_t)(i >> 8);
@@ -2541,9 +2543,6 @@ static void himax_mcu_touch_information(void)
 	err_cnt = himax_mcu_tp_info_check();
 	if (err_cnt > 0)
 		E("TP Info from IC is wrong, err_cnt = 0x%X", err_cnt);
-
-	g_core_fp.fp_ic_id_read();
-
 #else
 	ic_data->HX_RX_NUM = FIX_HX_RX_NUM;
 	ic_data->HX_TX_NUM = FIX_HX_TX_NUM;
@@ -2554,6 +2553,7 @@ static void himax_mcu_touch_information(void)
 	ic_data->HX_XY_REVERSE = FIX_HX_XY_REVERSE;
 	ic_data->HX_INT_IS_EDGE = FIX_HX_INT_IS_EDGE;
 #endif
+	g_core_fp.fp_ic_id_read();
 	I("%s:HX_RX_NUM =%d,HX_TX_NUM =%d,HX_MAX_PT=%d\n", __func__,
 		ic_data->HX_RX_NUM,
 		ic_data->HX_TX_NUM,
@@ -3289,11 +3289,11 @@ int himax_zf_part_info(const struct firmware *fw_entry)
 			g_core_fp.fp_register_write(sram_min, cfg_sz,
 				FW_buf, 0);
 			cfg_crc_hw = g_core_fp.fp_check_CRC(sram_min, cfg_sz);
-			if (cfg_crc_hw != cfg_crc_sw)
+			if (cfg_crc_hw != cfg_crc_sw) {
 				E("Config CRC FAIL, HW CRC = %X\n", cfg_crc_hw);
 				E("Config CRC FAIL, SW CRC = %X\n", cfg_crc_sw);
 				E("Config CRC FAIL, retry = %d\n", retry);
-			else
+			} else
 				I("Config CRC Pass\n");
 
 		} while (cfg_crc_hw != cfg_crc_sw && retry-- > 0);
@@ -3311,14 +3311,18 @@ int himax_zf_part_info(const struct firmware *fw_entry)
 #else
 			ovl_sidx = ovl_sidx + 2;
 #endif
-
-			if (himax_sram_write_crc_check(fw_entry,
-			zf_info_arr[ovl_sidx].sram_addr,
-			zf_info_arr[ovl_sidx].fw_addr,
-			zf_info_arr[ovl_sidx].write_size) != 0)
-				E("%s, Overlay HW CRC FAIL\n", __func__);
-			else
-				I("%s, Overlay HW CRC PASS\n", __func__);
+			if (zf_info_arr[ovl_sidx].write_size == 0) {
+				E("%s, WRONG overlay section, plese check firmware!\n",
+					__func__);
+			} else {
+				if (himax_sram_write_crc_check(fw_entry,
+				zf_info_arr[ovl_sidx].sram_addr,
+				zf_info_arr[ovl_sidx].fw_addr,
+				zf_info_arr[ovl_sidx].write_size) != 0)
+					E("%s, Overlay HW CRC FAIL\n", __func__);
+				else
+					I("%s, Overlay HW CRC PASS\n", __func__);
+			}
 
 #if defined(HX_SMART_WAKEUP)\
 	|| defined(HX_HIGH_SENSE)\
@@ -3353,13 +3357,18 @@ int himax_zf_part_info(const struct firmware *fw_entry)
 			}
 #endif
 		} else {
-			if (himax_sram_write_crc_check(fw_entry,
-			zf_info_arr[ovl_sidx].sram_addr,
-			zf_info_arr[ovl_sidx].fw_addr,
-			zf_info_arr[ovl_sidx].write_size) != 0)
-				E("%s, Overlay HW CRC FAIL\n", __func__);
-			else
-				I("%s, Overlay HW CRC PASS\n", __func__);
+			if (zf_info_arr[ovl_sidx].write_size == 0) {
+				E("%s, WRONG overlay section, plese check firmware!\n",
+					__func__);
+			} else {
+				if (himax_sram_write_crc_check(fw_entry,
+				zf_info_arr[ovl_sidx].sram_addr,
+				zf_info_arr[ovl_sidx].fw_addr,
+				zf_info_arr[ovl_sidx].write_size) != 0)
+					E("%s, Overlay HW CRC FAIL\n", __func__);
+				else
+					I("%s, Overlay HW CRC PASS\n", __func__);
+			}
 		}
 		I("%s: upgraded overlay section = %d\n", __func__,
 			 ovl_sidx);
@@ -4509,6 +4518,15 @@ void himax_mcu_in_cmd_init(void)
 	himax_in_parse_assign_cmd(flash_addr_spi200_trans_ctrl,
 		pflash_op->addr_spi200_trans_ctrl,
 		sizeof(pflash_op->addr_spi200_trans_ctrl));
+	himax_in_parse_assign_cmd(flash_addr_spi200_txfifo_rst,
+		pflash_op->addr_spi200_txfifo_rst,
+		sizeof(pflash_op->addr_spi200_txfifo_rst));
+	himax_in_parse_assign_cmd(flash_addr_spi200_flash_speed,
+		pflash_op->addr_spi200_flash_speed,
+		sizeof(pflash_op->addr_spi200_flash_speed));
+	himax_in_parse_assign_cmd(flash_addr_spi200_rst_status,
+		pflash_op->addr_spi200_rst_status,
+		sizeof(pflash_op->addr_spi200_rst_status));
 	himax_in_parse_assign_cmd(flash_addr_spi200_cmd,
 		pflash_op->addr_spi200_cmd,
 		sizeof(pflash_op->addr_spi200_cmd));
@@ -4524,6 +4542,9 @@ void himax_mcu_in_cmd_init(void)
 	himax_in_parse_assign_cmd(flash_data_spi200_trans_fmt,
 		pflash_op->data_spi200_trans_fmt,
 		sizeof(pflash_op->data_spi200_trans_fmt));
+	himax_in_parse_assign_cmd(flash_data_spi200_txfifo_rst,
+		pflash_op->data_spi200_txfifo_rst,
+		sizeof(pflash_op->data_spi200_txfifo_rst));
 	himax_in_parse_assign_cmd(flash_data_spi200_trans_ctrl_1,
 		pflash_op->data_spi200_trans_ctrl_1,
 		sizeof(pflash_op->data_spi200_trans_ctrl_1));
@@ -4539,6 +4560,9 @@ void himax_mcu_in_cmd_init(void)
 	himax_in_parse_assign_cmd(flash_data_spi200_trans_ctrl_5,
 		pflash_op->data_spi200_trans_ctrl_5,
 		sizeof(pflash_op->data_spi200_trans_ctrl_5));
+	himax_in_parse_assign_cmd(flash_data_spi200_trans_ctrl_6,
+		pflash_op->data_spi200_trans_ctrl_6,
+		sizeof(pflash_op->data_spi200_trans_ctrl_6));
 	himax_in_parse_assign_cmd(flash_data_spi200_cmd_1,
 		pflash_op->data_spi200_cmd_1,
 		sizeof(pflash_op->data_spi200_cmd_1));
@@ -4560,6 +4584,9 @@ void himax_mcu_in_cmd_init(void)
 	himax_in_parse_assign_cmd(flash_data_spi200_cmd_7,
 		pflash_op->data_spi200_cmd_7,
 		sizeof(pflash_op->data_spi200_cmd_7));
+	himax_in_parse_assign_cmd(flash_data_spi200_cmd_8,
+		pflash_op->data_spi200_cmd_8,
+		sizeof(pflash_op->data_spi200_cmd_8));
 	himax_in_parse_assign_cmd(flash_data_spi200_addr,
 		pflash_op->data_spi200_addr,
 		sizeof(pflash_op->data_spi200_addr));

@@ -360,6 +360,33 @@ static bool hx83191_sense_off(bool check_en)
 			return false;
 		}
 
+		tmp_data[0] = 0x00;
+
+		ret = kp_himax_bus_write((*kp_pic_op)->adr_i2c_psw_lb[0],
+				tmp_data, 1, HIMAX_I2C_RETRY_TIMES);
+		if (ret < 0) {
+			E("%s: i2c access fail!\n", __func__);
+			return false;
+		}
+
+		tmp_data[0] = (*kp_pic_op)->data_i2c_psw_lb[0];
+
+		ret = kp_himax_bus_write((*kp_pic_op)->adr_i2c_psw_lb[0],
+				tmp_data, 1, HIMAX_I2C_RETRY_TIMES);
+		if (ret < 0) {
+			E("%s: i2c access fail!\n", __func__);
+			return false;
+		}
+
+		tmp_data[0] = (*kp_pic_op)->data_i2c_psw_ub[0];
+
+		ret = kp_himax_bus_write((*kp_pic_op)->adr_i2c_psw_ub[0],
+				tmp_data, 1, HIMAX_I2C_RETRY_TIMES);
+		if (ret < 0) {
+			E("%s: i2c access fail!\n", __func__);
+			return false;
+		}
+
 		kp_g_core_fp->fp_register_read(
 			(*kp_pic_op)->addr_cs_central_state,
 			DATA_LEN_4,
@@ -385,10 +412,180 @@ static bool hx83191_sense_off(bool check_en)
 	return result;
 }
 
+static void hx83191_mcu_flash_programming(uint8_t *FW_content, int FW_Size)
+{
+	int page_prog_start = 0, i = 0, j = 0, k = 0, retry_cnt = 0;
+	uint8_t tmp_data[DATA_LEN_4];
+	uint8_t buring_data[FLASH_RW_MAX_LEN];	/* Read for flash data, 128K*/
+
+	I("%s", __func__);
+	/* 4 bytes for padding*/
+	kp_g_core_fp->fp_interface_on();
+
+	kp_g_core_fp->fp_register_write
+	((*kp_pflash_op)->addr_spi200_flash_speed,
+	DATA_LEN_4, (*kp_pflash_op)->data_spi200_cmd_8, 0);
+
+	/* ===SPI TX-FIFO Reset===*/
+	kp_g_core_fp->fp_register_write
+	((*kp_pflash_op)->addr_spi200_txfifo_rst,
+	DATA_LEN_4, (*kp_pflash_op)->data_spi200_txfifo_rst, 0);
+
+	/* ===Polling Reset Status ===*/
+	retry_cnt = 0;
+
+	do {
+		kp_g_core_fp->fp_register_read
+		((*kp_pflash_op)->addr_spi200_rst_status, 4, tmp_data, 0);
+
+		if (retry_cnt > 50) {
+			E("%s: Polling SPI Status Active FAIL", __func__);
+			return;
+		}
+		retry_cnt++;
+	} while (((tmp_data[0] & 0x04) >> 2) == 1);
+
+	/* ===SPI Transfer Format===*/
+	kp_g_core_fp->fp_register_write((*kp_pflash_op)->addr_spi200_trans_fmt,
+		DATA_LEN_4, (*kp_pflash_op)->data_spi200_trans_fmt, 0);
+
+	for (page_prog_start = 0 ; page_prog_start < FW_Size
+		; page_prog_start += FLASH_RW_MAX_LEN) {
+		kp_g_core_fp->fp_register_write
+		((*kp_pflash_op)->addr_spi200_trans_ctrl,
+		DATA_LEN_4, (*kp_pflash_op)->data_spi200_trans_ctrl_2, 0);
+		kp_g_core_fp->fp_register_write
+		((*kp_pflash_op)->addr_spi200_cmd,
+		DATA_LEN_4, (*kp_pflash_op)->data_spi200_cmd_2, 0);
+
+		/* ===Polling SPI Status Active ===*/
+		retry_cnt = 0;
+		do {
+			kp_g_core_fp->fp_register_read
+			((*kp_pflash_op)->addr_spi200_rst_status,
+			4, tmp_data, 0);
+
+			if (retry_cnt > 50) {
+				E("%s: Polling FAIL", __func__);
+				return;
+			}
+			retry_cnt++;
+		} while ((tmp_data[0] & 0x01) == 1);
+
+		/* ===WEL Write Enable ===*/
+		kp_g_core_fp->fp_register_write
+		((*kp_pflash_op)->addr_spi200_trans_ctrl,
+		DATA_LEN_4, (*kp_pflash_op)->data_spi200_trans_ctrl_6, 0);
+
+		kp_g_core_fp->fp_register_write
+		((*kp_pflash_op)->addr_spi200_cmd,
+		DATA_LEN_4, (*kp_pflash_op)->data_spi200_cmd_1, 0);
+
+		/* ===Polling SPI Status Active ===*/
+		retry_cnt = 0;
+		do {
+			kp_g_core_fp->fp_register_read
+			((*kp_pflash_op)->addr_spi200_rst_status,
+			4, tmp_data, 0);
+			if (retry_cnt > 50) {
+				E("%s: Polling FAIL", __func__);
+				return;
+			}
+			retry_cnt++;
+		} while ((tmp_data[0] & 0x01) == 1);
+
+		kp_g_core_fp->fp_register_read
+		((*kp_pflash_op)->addr_spi200_data, 4, tmp_data, 0);
+
+		if (((tmp_data[0] & 0x02) >> 1) == 0) {
+			I("%s:SPI 0x8000002c = %d\n", __func__, tmp_data[0]);
+			break;
+		}
+		 /*Programmable size = 256 bytes, word_number = 256/4 = 64*/
+		kp_g_core_fp->fp_register_write
+		((*kp_pflash_op)->addr_spi200_trans_ctrl,
+		DATA_LEN_4, (*kp_pflash_op)->data_spi200_trans_ctrl_4, 0);
+
+		/* Flash start address 1st : 0x0000_0000*/
+		if (page_prog_start < 0x100) {
+			tmp_data[3] = 0x00;
+			tmp_data[2] = 0x00;
+			tmp_data[1] = 0x00;
+			tmp_data[0] = (uint8_t)page_prog_start;
+		} else if (page_prog_start >= 0x100 &&
+			page_prog_start < 0x10000) {
+			tmp_data[3] = 0x00;
+			tmp_data[2] = 0x00;
+			tmp_data[1] = (uint8_t)(page_prog_start >> 8);
+			tmp_data[0] = (uint8_t)page_prog_start;
+		} else if (page_prog_start >= 0x10000 &&
+			page_prog_start < 0x1000000) {
+
+			tmp_data[3] = 0x00;
+			tmp_data[2] = (uint8_t)(page_prog_start >> 16);
+			tmp_data[1] = (uint8_t)(page_prog_start >> 8);
+			tmp_data[0] = (uint8_t)page_prog_start;
+		}
+		kp_g_core_fp->fp_register_write
+		((*kp_pflash_op)->addr_spi200_addr,
+		DATA_LEN_4, tmp_data, 0);
+
+		for (i = 0; i < ADDR_LEN_4; i++)
+			buring_data[i] = (*kp_pflash_op)->addr_spi200_data[i];
+
+		kp_g_core_fp->fp_register_write
+		((*kp_pflash_op)->addr_spi200_cmd,
+		DATA_LEN_4, (*kp_pflash_op)->data_spi200_cmd_6, 0);
+
+		for (j = 0 ; j < 16 ; j++) {
+			for (i = (page_prog_start + (j * 16)), k = 0
+			; i < (page_prog_start + (j * 16)) + 16
+			; i++, k++)
+
+				buring_data[k + ADDR_LEN_4] = FW_content[i];
+
+			if (kp_himax_bus_write
+			((*kp_pic_op)->addr_ahb_addr_byte_0[0],
+			buring_data, ADDR_LEN_4+16,
+			HIMAX_I2C_RETRY_TIMES) < 0) {
+
+				E("%s: i2c access fail!\n", __func__);
+				return;
+			}
+			/* ===Polling SPI Status Active ===*/
+			retry_cnt = 0;
+			do {
+				kp_g_core_fp->fp_register_read
+				((*kp_pflash_op)->addr_spi200_rst_status,
+				4, tmp_data, 0);
+
+				if (retry_cnt > 50) {
+					E("%s: Polling FAIL", __func__);
+					return;
+				}
+				retry_cnt++;
+			} while ((tmp_data[2] & 0x40) == 0);
+
+		}
+
+		if (!kp_g_core_fp->fp_wait_wip(1))
+			E("%s:Flash_Programming Fail\n", __func__);
+
+	}
+}
+
+static bool hx83191_mcu_ic_id_read(void)
+{
+	I("%s: [HX83191-A]", __func__);
+	return true;
+}
+
 static void hx83191_func_re_init(void)
 {
 	kp_g_core_fp->fp_sense_off = hx83191_sense_off;
 	kp_g_core_fp->fp_chip_init = hx83191_chip_init;
+	kp_g_core_fp->fp_flash_programming = hx83191_mcu_flash_programming;
+	kp_g_core_fp->fp_ic_id_read = hx83191_mcu_ic_id_read;
 	kp_g_core_fp->fp_slave_tcon_reset = AHBI2C_TCON_Reset_Slave;
 	kp_g_core_fp->fp_slave_adc_reset_slave = AHBI2C_ADC_Reset_Slave;
 	kp_g_core_fp->fp_slave_wdt_off_slave = AHBI2C_TurnOffWatchdog_Slave;
@@ -397,40 +594,40 @@ static void hx83191_func_re_init(void)
 static void hx83191_reg_re_init(void)
 {
 	kp_himax_in_parse_assign_cmd(hx83191_fw_addr_fw_mode_status,
-			(*kp_pfw_op)->addr_fw_mode_status,
-			sizeof((*kp_pfw_op)->addr_fw_mode_status));
+		(*kp_pfw_op)->addr_fw_mode_status,
+		sizeof((*kp_pfw_op)->addr_fw_mode_status));
 	kp_himax_in_parse_assign_cmd(hx83191_fw_addr_sorting_mode_en,
-			(*kp_pfw_op)->addr_sorting_mode_en,
-			sizeof((*kp_pfw_op)->addr_sorting_mode_en));
+		(*kp_pfw_op)->addr_sorting_mode_en,
+		sizeof((*kp_pfw_op)->addr_sorting_mode_en));
 	kp_himax_in_parse_assign_cmd(hx83191_fw_addr_set_frame_addr,
-			(*kp_pfw_op)->addr_set_frame_addr,
-			sizeof((*kp_pfw_op)->addr_set_frame_addr));
+		(*kp_pfw_op)->addr_set_frame_addr,
+		sizeof((*kp_pfw_op)->addr_set_frame_addr));
 	kp_himax_in_parse_assign_cmd(hx83191_fw_addr_raw_out_sel,
-			(*kp_pfw_op)->addr_raw_out_sel,
-			sizeof((*kp_pfw_op)->addr_raw_out_sel));
+		(*kp_pfw_op)->addr_raw_out_sel,
+		sizeof((*kp_pfw_op)->addr_raw_out_sel));
 	kp_himax_in_parse_assign_cmd(hx83191_driver_addr_fw_define_flash_reload,
-			(*kp_pdriver_op)->addr_fw_define_flash_reload,
-			sizeof((*kp_pdriver_op)->addr_fw_define_flash_reload));
+		(*kp_pdriver_op)->addr_fw_define_flash_reload,
+		sizeof((*kp_pdriver_op)->addr_fw_define_flash_reload));
 	kp_himax_in_parse_assign_cmd(
-			hx83191_driver_addr_fw_define_2nd_flash_reload,
-			(*kp_pdriver_op)->addr_fw_define_2nd_flash_reload,
-			sizeof((*kp_pdriver_op)->addr_fw_define_2nd_flash_reload));
+		hx83191_driver_addr_fw_define_2nd_flash_reload,
+		(*kp_pdriver_op)->addr_fw_define_2nd_flash_reload,
+		sizeof((*kp_pdriver_op)->addr_fw_define_2nd_flash_reload));
 	kp_himax_in_parse_assign_cmd(
-			hx83191_driver_addr_fw_define_rxnum_txnum_maxpt,
-			(*kp_pdriver_op)->addr_fw_define_rxnum_txnum_maxpt,
-			sizeof((*kp_pdriver_op)->addr_fw_define_rxnum_txnum_maxpt));
+		hx83191_driver_addr_fw_define_rxnum_txnum_maxpt,
+		(*kp_pdriver_op)->addr_fw_define_rxnum_txnum_maxpt,
+		sizeof((*kp_pdriver_op)->addr_fw_define_rxnum_txnum_maxpt));
 	kp_himax_in_parse_assign_cmd(hx83191_data_df_rx,
-			(*kp_pdriver_op)->data_df_rx,
-			sizeof((*kp_pdriver_op)->data_df_rx));
+		(*kp_pdriver_op)->data_df_rx,
+		sizeof((*kp_pdriver_op)->data_df_rx));
 	kp_himax_in_parse_assign_cmd(hx83191_data_df_tx,
-			(*kp_pdriver_op)->data_df_tx,
-			sizeof((*kp_pdriver_op)->data_df_tx));
+		(*kp_pdriver_op)->data_df_tx,
+		sizeof((*kp_pdriver_op)->data_df_tx));
 	kp_himax_in_parse_assign_cmd(hx83191_data_df_x_res,
-			(*kp_pdriver_op)->data_df_x_res,
-			sizeof((*kp_pdriver_op)->data_df_x_res));
+		(*kp_pdriver_op)->data_df_x_res,
+		sizeof((*kp_pdriver_op)->data_df_x_res));
 	kp_himax_in_parse_assign_cmd(hx83191_data_df_y_res,
-			(*kp_pdriver_op)->data_df_y_res,
-			sizeof((*kp_pdriver_op)->data_df_y_res));
+		(*kp_pdriver_op)->data_df_y_res,
+		sizeof((*kp_pdriver_op)->data_df_y_res));
 }
 
 static bool hx83191_chip_detect(void)

@@ -356,13 +356,18 @@ struct hx_guest_info {
 	#define flash_addr_spi200_cmd          (flash_addr_ctrl_base + 0x24)
 	#define flash_addr_spi200_addr         (flash_addr_ctrl_base + 0x28)
 	#define flash_addr_spi200_data         (flash_addr_ctrl_base + 0x2c)
+	#define flash_addr_spi200_txfifo_rst   (flash_addr_ctrl_base + 0x30)
+	#define flash_addr_spi200_rst_status   (flash_addr_ctrl_base + 0x34)
+	#define flash_addr_spi200_flash_speed  (flash_addr_ctrl_base + 0x40)
 	#define flash_addr_spi200_bt_num       (flash_addr_ctrl_base + 0xe8)
+	#define flash_data_spi200_txfifo_rst   0x00000004
 	#define flash_data_spi200_trans_fmt    0x00020780
 	#define flash_data_spi200_trans_ctrl_1 0x42000003
 	#define flash_data_spi200_trans_ctrl_2 0x47000000
 	#define flash_data_spi200_trans_ctrl_3 0x67000000
 	#define flash_data_spi200_trans_ctrl_4 0x610ff000
 	#define flash_data_spi200_trans_ctrl_5 0x694002ff
+	#define flash_data_spi200_trans_ctrl_6 0x42000000
 	#define flash_data_spi200_cmd_1        0x00000005
 	#define flash_data_spi200_cmd_2        0x00000006
 	#define flash_data_spi200_cmd_3        0x000000C7
@@ -370,6 +375,7 @@ struct hx_guest_info {
 	#define flash_data_spi200_cmd_5        0x00000020
 	#define flash_data_spi200_cmd_6        0x00000002
 	#define flash_data_spi200_cmd_7        0x0000003b
+	#define flash_data_spi200_cmd_8        0x00000003
 	#define flash_data_spi200_addr         0x00000000
 
 	#define on_flash_addr_ctrl_base  0x80000000
@@ -581,17 +587,22 @@ struct fw_operation {
 struct flash_operation {
 	uint8_t addr_spi200_trans_fmt[4];
 	uint8_t addr_spi200_trans_ctrl[4];
+	uint8_t addr_spi200_txfifo_rst[4];
+	uint8_t addr_spi200_rst_status[4];
+	uint8_t addr_spi200_flash_speed[4];
 	uint8_t addr_spi200_cmd[4];
 	uint8_t addr_spi200_addr[4];
 	uint8_t addr_spi200_data[4];
 	uint8_t addr_spi200_bt_num[4];
 
+	uint8_t data_spi200_txfifo_rst[4];
 	uint8_t data_spi200_trans_fmt[4];
 	uint8_t data_spi200_trans_ctrl_1[4];
 	uint8_t data_spi200_trans_ctrl_2[4];
 	uint8_t data_spi200_trans_ctrl_3[4];
 	uint8_t data_spi200_trans_ctrl_4[4];
 	uint8_t data_spi200_trans_ctrl_5[4];
+	uint8_t data_spi200_trans_ctrl_6[4];
 	uint8_t data_spi200_cmd_1[4];
 	uint8_t data_spi200_cmd_2[4];
 	uint8_t data_spi200_cmd_3[4];
@@ -599,6 +610,7 @@ struct flash_operation {
 	uint8_t data_spi200_cmd_5[4];
 	uint8_t data_spi200_cmd_6[4];
 	uint8_t data_spi200_cmd_7[4];
+	uint8_t data_spi200_cmd_8[4];
 	uint8_t data_spi200_addr[4];
 };
 

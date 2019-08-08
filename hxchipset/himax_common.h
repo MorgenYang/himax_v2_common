@@ -40,20 +40,20 @@
 #include "himax_platform.h"
 #include <linux/kallsyms.h>
 
-#if defined(CONFIG_DRM)
-#include <linux/msm_drm_notify.h>
+#if defined(CONFIG_HIMAX_DRM)
+	#include <linux/msm_drm_notify.h>
 #elif defined(CONFIG_FB)
-#include <linux/notifier.h>
-#include <linux/fb.h>
+	#include <linux/notifier.h>
+	#include <linux/fb.h>
 #elif defined(CONFIG_HAS_EARLYSUSPEND)
-#include <linux/earlysuspend.h>
+	#include <linux/earlysuspend.h>
 #endif
 
 #ifdef CONFIG_OF
-#include <linux/of_gpio.h>
+	#include <linux/of_gpio.h>
 #endif
 
-#define HIMAX_DRIVER_VER "2.0.0.30_ABCD1234_01"
+#define HIMAX_DRIVER_VER "2.0.0.32_ABCD1234_01"
 
 #define FLASH_DUMP_FILE "/sdcard/HX_Flash_Dump.bin"
 
@@ -108,7 +108,7 @@
 /*#undef CONFIG_FB*/
 
 /* Enable it if driver go into suspend/resume twice */
-/*#undef CONFIG_DRM*/
+/*#undef CONFIG_HIMAX_DRM*/
 
 #if defined(__HIMAX_MOD__)
 #define HX_USE_KSYM
@@ -137,7 +137,7 @@
 #define DELAY_TIME 40
 #endif
 
-#if defined(CONFIG_DRM)
+#if defined(CONFIG_HIMAX_DRM)
 int drm_notifier_callback(struct notifier_block *self,
 			unsigned long event, void *data);
 #elif defined(CONFIG_FB)
@@ -439,7 +439,7 @@ struct himax_ts_data {
 	int suspend_resume_done;
 	int bus_speed;
 
-#if defined(CONFIG_FB) || defined(CONFIG_DRM)
+#if defined(CONFIG_FB) || defined(CONFIG_HIMAX_DRM)
 	struct notifier_block fb_notif;
 	struct workqueue_struct *himax_att_wq;
 	struct delayed_work work_att;

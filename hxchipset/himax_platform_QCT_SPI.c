@@ -842,7 +842,7 @@ static int himax_common_suspend(struct device *dev)
 	struct himax_ts_data *ts = dev_get_drvdata(dev);
 
 	I("%s: enter\n", __func__);
-#ifdef CONFIG_DRM
+#ifdef CONFIG_HIMAX_DRM
 	if (!ts->initialized)
 		return -ECANCELED;
 #endif
@@ -855,7 +855,7 @@ static int himax_common_resume(struct device *dev)
 	struct himax_ts_data *ts = dev_get_drvdata(dev);
 
 	I("%s: enter\n", __func__);
-#ifdef CONFIG_DRM
+#ifdef CONFIG_HIMAX_DRM
 	/*
 	 *	wait until device resume for TDDI
 	 *	TDDI: Touch and display Driver IC
@@ -870,7 +870,7 @@ static int himax_common_resume(struct device *dev)
 }
 #endif
 
-#if defined(CONFIG_DRM)
+#if defined(CONFIG_HIMAX_DRM)
 int drm_notifier_callback(struct notifier_block *self,
 		unsigned long event, void *data)
 {
@@ -1025,7 +1025,7 @@ int himax_chip_common_remove(struct spi_device *spi)
 }
 
 static const struct dev_pm_ops himax_common_pm_ops = {
-#if (!defined(CONFIG_FB)) && (!defined(CONFIG_DRM))
+#if (!defined(CONFIG_FB)) && (!defined(CONFIG_HIMAX_DRM))
 	.suspend = himax_common_suspend,
 	.resume  = himax_common_resume,
 #endif

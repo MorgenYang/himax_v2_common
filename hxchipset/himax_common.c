@@ -281,7 +281,9 @@ static ssize_t himax_self_test(struct seq_file *s, void *v)
 {
 	int val = 0x00;
 	size_t ret = 0;
+#ifdef CONFIG_TOUCHSCREEN_HIMAX_INSPECT
 	int i = 0;
+#endif
 
 	I("%s: enter, %d\n", __func__, __LINE__);
 
@@ -1340,6 +1342,7 @@ int himax_report_data_init(void)
 	}
 #if defined(HX_PEN_FUNC_EN)
 	hx_touch_data->touch_info_size += PEN_INFO_SZ;
+	hx_touch_data->rawdata_size -=  PEN_INFO_SZ;
 #endif
 	if ((ic_data->HX_TX_NUM
 	* ic_data->HX_RX_NUM
@@ -2948,7 +2951,7 @@ static int hx_chk_flash_sts(void)
 }
 #endif
 
-#if defined(CONFIG_DRM)
+#if defined(CONFIG_HIMAX_DRM)
 static void himax_fb_register(struct work_struct *work)
 {
 	int ret = 0;
@@ -3199,7 +3202,7 @@ FW_force_upgrade:
 
 	spin_lock_init(&ts->irq_lock);
 	ts->initialized = true;
-#if defined(CONFIG_FB) || defined(CONFIG_DRM)
+#if defined(CONFIG_FB) || defined(CONFIG_HIMAX_DRM)
 	ts->himax_att_wq = create_singlethread_workqueue("HMX_ATT_reuqest");
 
 	if (!ts->himax_att_wq) {
@@ -3260,7 +3263,7 @@ err_report_data_init_failed:
 #ifdef HX_SMART_WAKEUP
 	wakeup_source_trash(&ts->ts_SMWP_wake_lock);
 #endif
-#if defined(CONFIG_FB) || defined(CONFIG_DRM)
+#if defined(CONFIG_FB) || defined(CONFIG_HIMAX_DRM)
 	cancel_delayed_work_sync(&ts->work_att);
 	destroy_workqueue(ts->himax_att_wq);
 err_get_intr_bit_failed:
@@ -3330,7 +3333,7 @@ void himax_chip_common_deinit(void)
 #ifdef HX_SMART_WAKEUP
 	wakeup_source_trash(&ts->ts_SMWP_wake_lock);
 #endif
-#if defined(CONFIG_DRM)
+#if defined(CONFIG_HIMAX_DRM)
 	if (msm_drm_unregister_client(&ts->fb_notif))
 		E("Error occurred while unregistering fb_notifier.\n");
 	cancel_delayed_work_sync(&ts->work_att);

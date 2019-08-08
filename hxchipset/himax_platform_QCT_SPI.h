@@ -133,7 +133,7 @@ extern uint8_t himax_int_gpio_read(int pinnum);
 extern int himax_gpio_power_config(struct himax_i2c_platform_data *pdata);
 void himax_gpio_power_deconfig(struct himax_i2c_platform_data *pdata);
 
-#if defined(CONFIG_DRM)
+#if defined(CONFIG_HIMAX_DRM)
 extern int drm_notifier_callback(struct notifier_block *self,
 		unsigned long event, void *data);
 #elif defined(CONFIG_FB)

@@ -25,12 +25,13 @@ DEFINE_MUTEX(hx_wr_access);
 
 const struct of_device_id himax_match_table[] = {
 	{.compatible = "mediatek,cap_touch" },
+	{.compatible = "mediatek,touch" },
+	{.compatible = "himax,hxcommon" },
 	{},
 };
 MODULE_DEVICE_TABLE(of, himax_match_table);
 
 static int himax_tpd_int_gpio = 5;
-unsigned int himax_touch_irq;
 unsigned int himax_tpd_rst_gpio_number = -1;
 unsigned int himax_tpd_int_gpio_number = -1;
 
@@ -46,8 +47,7 @@ struct device *g_device;
 /******* SPI-start *******/
 struct mutex hx_spi_lock;
 
-static struct spi_device	*hx_spi;
-static int hx_irq;
+static struct	spi_device	*hx_spi;
 /******* SPI-end *******/
 
 void (*kp_tpd_gpio_as_int)(int gpio);
@@ -389,7 +389,7 @@ void himax_int_enable(int enable)
 {
 	struct himax_ts_data *ts = private_ts;
 	unsigned long irqflags = 0;
-	int irqnum = hx_irq;
+	int irqnum = ts->hx_irq;
 
 	spin_lock_irqsave(&ts->irq_lock, irqflags);
 	I("%s: Entering! irqnum = %d\n", __func__, irqnum);
@@ -479,11 +479,11 @@ int himax_int_register_trigger(void)
 	struct himax_ts_data *ts = private_ts;
 
 	if (ic_data->HX_INT_IS_EDGE) {
-		ret = request_threaded_irq(hx_irq, NULL, himax_ts_thread,
+		ret = request_threaded_irq(ts->hx_irq, NULL, himax_ts_thread,
 			IRQF_TRIGGER_FALLING | IRQF_ONESHOT,
 			HIMAX_common_NAME, ts);
 	} else {
-		ret = request_threaded_irq(hx_irq, NULL, himax_ts_thread,
+		ret = request_threaded_irq(ts->hx_irq, NULL, himax_ts_thread,
 			IRQF_TRIGGER_LOW | IRQF_ONESHOT, HIMAX_common_NAME, ts);
 	}
 
@@ -511,36 +511,35 @@ int himax_ts_register_interrupt(void)
 		of_property_read_u32_array(node, "debounce",
 			ints, ARRAY_SIZE(ints));
 		gpio_set_debounce(ints[0], ints[1]);
-		himax_touch_irq = irq_of_parse_and_map(node, 0);
-		I("himax_touch_irq=%d\n", himax_touch_irq);
-		hx_irq = himax_touch_irq;
+		ts->hx_irq = irq_of_parse_and_map(node, 0);
+		I("himax_touch_irq=%d\n", ts->hx_irq);
 	} else {
 		I("[%s] tpd request_irq can not find touch eint device node!\n",
 				__func__);
-		hx_irq = 0;
+		ts->hx_irq = 0;
 	}
 
 	ts->irq_enabled = 0;
 	ts->use_irq = 0;
 
 	/* Work functon */
-	if (hx_irq) {/*INT mode*/
+	if (ts->hx_irq) {/*INT mode*/
 		ts->use_irq = 1;
 		ret = himax_int_register_trigger();
 
 		if (ret == 0) {
 			ts->irq_enabled = 1;
 			atomic_set(&ts->irq_state, 1);
-			I("%s: irq enabled at gpio: %d\n", __func__, hx_irq);
+			I("%s: irq enabled at gpio: %d\n", __func__, ts->hx_irq);
 #ifdef HX_SMART_WAKEUP
-			irq_set_irq_wake(hx_irq, 1);
+			irq_set_irq_wake(ts->hx_irq, 1);
 #endif
 		} else {
 			ts->use_irq = 0;
 			E("%s: request_irq failed\n", __func__);
 		}
 	} else {
-		I("%s: hx_irq is empty, use polling mode.\n", __func__);
+		I("%s: ts->hx_irq is empty, use polling mode.\n", __func__);
 	}
 
 	/*if use polling mode need to disable HX_ESD_RECOVERY function*/
@@ -564,13 +563,12 @@ int himax_ts_unregister_interrupt(void)
 	I("%s: entered.\n", __func__);
 
 	/* Work functon */
-	if (private_ts->hx_irq && ts->use_irq) {/*INT mode*/
+	if (ts->hx_irq && ts->use_irq) {/*INT mode*/
 #ifdef HX_SMART_WAKEUP
 		irq_set_irq_wake(ts->hx_irq, 0);
 #endif
 		free_irq(ts->hx_irq, ts);
-		I("%s: irq disabled at qpio: %d\n", __func__,
-			private_ts->hx_irq);
+		I("%s: irq disabled at qpio: %d\n", __func__, ts->hx_irq);
 	}
 
 	/*if use polling mode need to disable HX_ESD_RECOVERY function*/
@@ -637,7 +635,7 @@ static int himax_common_probe_spi(struct spi_device *spi)
 	hx_spi->mode = SPI_MODE_3;
 	hx_spi->bits_per_word = 8;
 
-	hx_irq = 0;
+	ts->hx_irq = 0;
 	spi_set_drvdata(spi, ts);
 	mutex_init(&hx_spi_lock);
 
@@ -838,4 +836,3 @@ module_exit(himax_common_exit);
 
 MODULE_DESCRIPTION("Himax_common driver");
 MODULE_LICENSE("GPL");
-

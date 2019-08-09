@@ -301,6 +301,66 @@ static bool himax_get_ic_Amount(void)
 	return result;
 }
 
+static void hx83191_sense_on(uint8_t FlashMode)
+{
+	uint8_t tmp_data[DATA_LEN_4];
+	int retry = 0;
+	int ret = 0;
+
+	I("Enter %s\n", __func__);
+	g_core_fp.fp_interface_on();
+
+	if (!FlashMode) {
+#ifdef HX_RST_PIN_FUNC
+		g_core_fp.fp_ic_reset(false, false);
+#else
+		g_core_fp.fp_system_reset();
+#endif
+	} else {
+		do {
+			g_core_fp.fp_register_write(
+			pfw_op->addr_ctrl_fw_isr,
+			sizeof(pfw_op->addr_ctrl_fw_isr),
+			pfw_op->data_safe_mode_release_pw_reset, 0);
+
+			msleep(20);
+
+			g_core_fp.fp_register_read(
+			pfw_op->addr_ctrl_fw_isr,
+			DATA_LEN_4, tmp_data, 0);
+
+			I("%s:Read status from IC = %X,%X\n", __func__,
+				tmp_data[0], tmp_data[1]);
+		} while (tmp_data[0] != 0x00
+			&& retry++ < 5);
+
+		if (retry >= 5) {
+			E("%s: Fail:\n", __func__);
+#ifdef HX_RST_PIN_FUNC
+			g_core_fp.fp_ic_reset(false, false);
+#else
+			g_core_fp.fp_system_reset();
+#endif
+		} else {
+			I("%s:OK and Read status from IC = %X,%X\n",
+					__func__, tmp_data[0], tmp_data[1]);
+			/* reset code*/
+			tmp_data[0] = 0x00;
+
+			ret = himax_bus_write(pic_op->adr_i2c_psw_lb[0],
+					tmp_data, 1, HIMAX_I2C_RETRY_TIMES);
+			if (ret < 0)
+				E("%s: i2c access fail!\n", __func__);
+
+				ret = himax_bus_write(pic_op->adr_i2c_psw_ub[0],
+					tmp_data, 1, HIMAX_I2C_RETRY_TIMES);
+			if (ret < 0)
+				E("%s: i2c access fail!\n", __func__);
+		}
+		msleep(280);
+	}
+}
+
 static bool hx83191_sense_off(bool check_en)
 {
 	bool result = true;
@@ -311,13 +371,15 @@ static bool hx83191_sense_off(bool check_en)
 	uint8_t check = 0x87;
 	int ret = 0;
 
+	msleep(280);
+
 	kp_g_core_fp->fp_register_read(
 		(*kp_pic_op)->addr_cs_central_state,
 		DATA_LEN_4,
 		tmp_data,
 		0);
 
-	if (tmp_data[0] == 0x05) {
+	if (tmp_data[0] != 0x0C) {
 
 		tmp_addr[3] = 0x90;
 		tmp_addr[2] = 0x00;
@@ -368,6 +430,7 @@ static bool hx83191_sense_off(bool check_en)
 			E("%s: i2c access fail!\n", __func__);
 			return false;
 		}
+		usleep_range(100, 110);
 
 		tmp_data[0] = (*kp_pic_op)->data_i2c_psw_lb[0];
 
@@ -582,6 +645,7 @@ static bool hx83191_mcu_ic_id_read(void)
 
 static void hx83191_func_re_init(void)
 {
+	kp_g_core_fp->fp_sense_on = hx83191_sense_on;
 	kp_g_core_fp->fp_sense_off = hx83191_sense_off;
 	kp_g_core_fp->fp_chip_init = hx83191_chip_init;
 	kp_g_core_fp->fp_flash_programming = hx83191_mcu_flash_programming;

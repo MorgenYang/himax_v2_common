@@ -234,13 +234,13 @@ EXPORT_SYMBOL(HX_PROC_SEND_FLAG);
 
 #ifdef HX_SMART_WAKEUP
 #define HIMAX_PROC_SMWP_FILE "SMWP"
-struct proc_dir_entry *himax_proc_SMWP_file = NULL;
+struct proc_dir_entry *himax_proc_SMWP_file;
 #define HIMAX_PROC_GESTURE_FILE "GESTURE"
-struct proc_dir_entry *himax_proc_GESTURE_file = NULL;
+struct proc_dir_entry *himax_proc_GESTURE_file;
 uint8_t HX_SMWP_EN;
 #ifdef HX_P_SENSOR
 #define HIMAX_PROC_PSENSOR_FILE "Psensor"
-struct proc_dir_entry *himax_proc_psensor_file = NULL;
+struct proc_dir_entry *himax_proc_psensor_file;
 #endif
 #endif
 #if defined(HX_SMART_WAKEUP) || defined(CONFIG_TOUCHSCREEN_HIMAX_INSPECT)
@@ -249,7 +249,7 @@ bool FAKE_POWER_KEY_SEND = true;
 
 #ifdef HX_HIGH_SENSE
 #define HIMAX_PROC_HSEN_FILE "HSEN"
-struct proc_dir_entry *himax_proc_HSEN_file = NULL;
+struct proc_dir_entry *himax_proc_HSEN_file;
 #endif
 
 #if defined(HX_PALM_REPORT)
@@ -2951,7 +2951,7 @@ static int hx_chk_flash_sts(void)
 }
 #endif
 
-#if defined(CONFIG_HIMAX_DRM)
+#if defined(HX_CONFIG_DRM)
 static void himax_fb_register(struct work_struct *work)
 {
 	int ret = 0;
@@ -2966,7 +2966,7 @@ static void himax_fb_register(struct work_struct *work)
 	if (ret)
 		E("Unable to register fb_notifier: %d\n", ret);
 }
-#elif defined(CONFIG_FB)
+#elif defined(HX_CONFIG_FB)
 static void himax_fb_register(struct work_struct *work)
 {
 	int ret = 0;
@@ -3076,7 +3076,7 @@ int himax_chip_common_init(void)
 
 		for (i = 0; i < entry->hx_ic_dt_num; i++) {
 			if (entry->core_chip_dt[i].fp_chip_detect != NULL) {
-				if (entry->core_chip_dt[i].fp_chip_detect()	== true) {
+				if (entry->core_chip_dt[i].fp_chip_detect() == true) {
 					I("%s: chip found! list_num=%d\n",
 							__func__, i);
 					goto found_hx_chip;
@@ -3121,7 +3121,7 @@ found_hx_chip:
 #ifdef HX_AUTO_UPDATE_FW
 FW_force_upgrade:
 	ts->himax_update_wq =
-			create_singlethread_workqueue("HMX_update_reuqest");
+			create_singlethread_workqueue("HMX_update_request");
 	if (!ts->himax_update_wq) {
 		E(" allocate himax_update_wq failed\n");
 		err = -ENOMEM;
@@ -3134,7 +3134,7 @@ FW_force_upgrade:
 #ifdef HX_ZERO_FLASH
 	g_auto_update_flag = true;
 	ts->himax_0f_update_wq =
-			create_singlethread_workqueue("HMX_0f_update_reuqest");
+			create_singlethread_workqueue("HMX_0f_update_request");
 	if (!ts->himax_0f_update_wq) {
 		E(" allocate himax_0f_update_wq failed\n");
 		err = -ENOMEM;
@@ -3202,8 +3202,8 @@ FW_force_upgrade:
 
 	spin_lock_init(&ts->irq_lock);
 	ts->initialized = true;
-#if defined(CONFIG_FB) || defined(CONFIG_HIMAX_DRM)
-	ts->himax_att_wq = create_singlethread_workqueue("HMX_ATT_reuqest");
+#if defined(HX_CONFIG_FB) || defined(HX_CONFIG_DRM)
+	ts->himax_att_wq = create_singlethread_workqueue("HMX_ATT_request");
 
 	if (!ts->himax_att_wq) {
 		E(" allocate himax_att_wq failed\n");
@@ -3263,7 +3263,7 @@ err_report_data_init_failed:
 #ifdef HX_SMART_WAKEUP
 	wakeup_source_trash(&ts->ts_SMWP_wake_lock);
 #endif
-#if defined(CONFIG_FB) || defined(CONFIG_HIMAX_DRM)
+#if defined(HX_CONFIG_FB) || defined(HX_CONFIG_DRM)
 	cancel_delayed_work_sync(&ts->work_att);
 	destroy_workqueue(ts->himax_att_wq);
 err_get_intr_bit_failed:
@@ -3333,12 +3333,12 @@ void himax_chip_common_deinit(void)
 #ifdef HX_SMART_WAKEUP
 	wakeup_source_trash(&ts->ts_SMWP_wake_lock);
 #endif
-#if defined(CONFIG_HIMAX_DRM)
+#if defined(HX_CONFIG_DRM)
 	if (msm_drm_unregister_client(&ts->fb_notif))
 		E("Error occurred while unregistering fb_notifier.\n");
 	cancel_delayed_work_sync(&ts->work_att);
 	destroy_workqueue(ts->himax_att_wq);
-#elif defined(CONFIG_FB)
+#elif defined(HX_CONFIG_FB)
 	if (fb_unregister_client(&ts->fb_notif))
 		E("Error occurred while unregistering fb_notifier.\n");
 	cancel_delayed_work_sync(&ts->work_att);

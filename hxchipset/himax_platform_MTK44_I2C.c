@@ -840,7 +840,7 @@ static void himax_common_resume(struct device *dev)
 }
 
 
-#if defined(CONFIG_FB)
+#if defined(HX_CONFIG_FB)
 int fb_notifier_callback(struct notifier_block *self,
 		unsigned long event, void *data)
 {

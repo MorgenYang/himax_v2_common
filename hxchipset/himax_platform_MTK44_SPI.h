@@ -36,6 +36,10 @@
 #define MTK
 #define MTK_KERNEL_44
 /* #define MTK_INT_NOT_WORK_WORKAROUND */
+#ifndef CONFIG_TOUCHSCREEN_MTK
+	#error Please check if need to enable HX_CONFIG_FB or not
+#endif
+/*#define HX_CONFIG_FB*/ /* Need Enable if mtk_tpd not support suspend/resume */
 
 extern struct device *g_device;
 #if defined(CONFIG_TOUCHSCREEN_HIMAX_DEBUG)
@@ -120,7 +124,7 @@ extern int himax_gpio_power_config(struct himax_i2c_platform_data *pdata);
 void himax_gpio_power_deconfig(struct himax_i2c_platform_data *pdata);
 extern int of_get_himax85xx_platform_data(struct device *dev);
 
-#if defined(CONFIG_FB)
+#if defined(HX_CONFIG_FB)
 extern int fb_notifier_callback(struct notifier_block *self,
 		unsigned long event, void *data);
 #endif

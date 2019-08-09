@@ -40,9 +40,9 @@
 #include "himax_platform.h"
 #include <linux/kallsyms.h>
 
-#if defined(CONFIG_HIMAX_DRM)
+#if defined(HX_CONFIG_DRM)
 	#include <linux/msm_drm_notify.h>
-#elif defined(CONFIG_FB)
+#elif defined(HX_CONFIG_FB)
 	#include <linux/notifier.h>
 	#include <linux/fb.h>
 #elif defined(CONFIG_HAS_EARLYSUSPEND)
@@ -53,7 +53,7 @@
 	#include <linux/of_gpio.h>
 #endif
 
-#define HIMAX_DRIVER_VER "2.0.0.32_ABCD1234_01"
+#define HIMAX_DRIVER_VER "2.0.0.34_ABCD1234_01"
 
 #define FLASH_DUMP_FILE "/sdcard/HX_Flash_Dump.bin"
 
@@ -90,9 +90,6 @@
 /*#define HX_PON_PIN_SUPPORT*/
 /*#define HX_PEN_FUNC_EN*/
 
-/*Independent threads run the notification chain notification function resume*/
-/*#define HX_CONTAINER_SPEED_UP*/
-
 /* Support Self Virtual key, default is close*/
 /*#define HX_EN_SEL_BUTTON*/
 
@@ -105,10 +102,10 @@
 #endif
 
 /* Enable it if driver go into suspend/resume twice */
-/*#undef CONFIG_FB*/
+/*#undef HX_CONFIG_FB*/
 
 /* Enable it if driver go into suspend/resume twice */
-/*#undef CONFIG_HIMAX_DRM*/
+/*#undef HX_CONFIG_DRM*/
 
 #if defined(__HIMAX_MOD__)
 #define HX_USE_KSYM
@@ -121,6 +118,8 @@
 /* zero flash case, you need to setup the fix_touch_info of module*/
 #define HX_FIX_TOUCH_INFO
 /*#define HX_CODE_OVERLAY*/
+/*Independent threads run the notification chain notification function resume*/
+/*#define HX_CONTAINER_SPEED_UP*/
 #endif
 
 #if defined(HX_AUTO_UPDATE_FW)
@@ -137,10 +136,10 @@
 #define DELAY_TIME 40
 #endif
 
-#if defined(CONFIG_HIMAX_DRM)
+#if defined(HX_CONFIG_DRM)
 int drm_notifier_callback(struct notifier_block *self,
 			unsigned long event, void *data);
-#elif defined(CONFIG_FB)
+#elif defined(HX_CONFIG_FB)
 int fb_notifier_callback(struct notifier_block *self,
 		unsigned long event, void *data);
 #elif defined(CONFIG_HAS_EARLYSUSPEND)
@@ -439,7 +438,7 @@ struct himax_ts_data {
 	int suspend_resume_done;
 	int bus_speed;
 
-#if defined(CONFIG_FB) || defined(CONFIG_HIMAX_DRM)
+#if defined(HX_CONFIG_FB) || defined(HX_CONFIG_DRM)
 	struct notifier_block fb_notif;
 	struct workqueue_struct *himax_att_wq;
 	struct delayed_work work_att;

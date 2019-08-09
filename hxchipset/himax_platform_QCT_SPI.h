@@ -26,6 +26,17 @@
 	#include <linux/regulator/consumer.h>
 #endif
 
+
+#if defined(CONFIG_FB) && defined(CONFIG_DRM)
+	#error Please check which define should be enabled in the platform
+#endif
+#if defined(CONFIG_FB)
+#define HX_CONFIG_FB
+#endif
+#if defined(CONFIG_DRM)
+#define HX_CONFIG_DRM
+#endif
+
 #define HIMAX_I2C_RETRY_TIMES 3
 
 #if defined(CONFIG_TOUCHSCREEN_HIMAX_DEBUG)
@@ -133,10 +144,10 @@ extern uint8_t himax_int_gpio_read(int pinnum);
 extern int himax_gpio_power_config(struct himax_i2c_platform_data *pdata);
 void himax_gpio_power_deconfig(struct himax_i2c_platform_data *pdata);
 
-#if defined(CONFIG_HIMAX_DRM)
+#if defined(HX_CONFIG_DRM)
 extern int drm_notifier_callback(struct notifier_block *self,
 		unsigned long event, void *data);
-#elif defined(CONFIG_FB)
+#elif defined(HX_CONFIG_FB)
 extern int fb_notifier_callback(struct notifier_block *self,
 		unsigned long event, void *data);
 #endif
